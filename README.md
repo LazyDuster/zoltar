@@ -1,4 +1,4 @@
-# zoltar - fortune teller written in go
+# zoltar - fortune teller
 
 ## Installation
 ```
