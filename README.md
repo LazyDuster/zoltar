@@ -1,7 +1,8 @@
-# zoltar - fortune teller written in go
+# zoltar - fortune teller
 
 ## Installation
 ```
 git clone https://github.com/lazyduster/zoltar
-go build main.go
+cd zoltar
+go build -o zoltar
 ```
