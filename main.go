@@ -7,12 +7,13 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 	"github.com/bwmarrin/discordgo"
 )
 
 var fortunes []string
 
-func fortuneSplit(data []byte, atEOF bool) (advance int, token []byte, err error) {
+func FortuneSplit(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	for i := 0; i < len(data); i++ {
 		if data[i] == '%' {
 			return i + 1, data[:i], nil
@@ -24,9 +25,9 @@ func fortuneSplit(data []byte, atEOF bool) (advance int, token []byte, err error
 	return 0, data, bufio.ErrFinalToken
 }
 
-func parseFortune(f *os.File) {
+func ParseFortune(f *os.File) {
 	scanner := bufio.NewScanner(f)
-	scanner.Split(fortuneSplit)
+	scanner.Split(FortuneSplit)
 	for scanner.Scan() {
 		fortunes = append(fortunes, scanner.Text())
 	}
@@ -35,19 +36,22 @@ func parseFortune(f *os.File) {
 	}
 }
 
-func getFortune() (fortune string) {
+func GetFortune() (fortune string) {
 	i := rand.Intn(len(fortunes))
 	return fortunes[i]
 }
 
-func sendFortune(s *discordgo.Session, m *discordgo.MessageCreate) {
+func SendFortune(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// ignore bot messages
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
 
 	if m.Content == "!fortune" {
-		s.ChannelMessageSend(m.ChannelID, getFortune())
+		//msgtitle := "<@" + s.State.User.ID + ">, it's your lucky day."
+		msgtitle := m.Author.Username + ", it's your lucky day."
+		me := discordgo.MessageEmbed{ Title: msgtitle, Description: GetFortune(), Color: 39423 }
+		s.ChannelMessageSendEmbed(m.ChannelID, &me)
 	}
 
 	if m.Content == "!zoltar" {
@@ -64,15 +68,16 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error reading fortune file: %v\n", err)
 		os.Exit(1)
 	}
-	parseFortune(f)
+	ParseFortune(f)
 	f.Close()
 
 	if len(os.Args) != 2 {
-		fmt.Printf("Usage: gortune [token]\n")
+		fmt.Printf("Usage: zoltar [token]\n")
 		os.Exit(0)
 	}
 
 	var token string = os.Args[1]
+	rand.Seed(time.Now().UTC().UnixNano())
 
 	// Create Discord session
 	dg, err := discordgo.New("Bot " + token)
@@ -81,7 +86,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	dg.AddHandler(sendFortune)
+	dg.AddHandler(SendFortune)
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildMessages)
 
 	// Open websocket and begin listening
