@@ -45,8 +45,14 @@ func sendFortune(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if m.Author.ID == s.State.User.ID {
 		return
 	}
+
 	if m.Content == "!fortune" {
 		s.ChannelMessageSend(m.ChannelID, getFortune())
+	}
+
+	if m.Content == "!zoltar" {
+		var greeting string = "ZOLTAR SAYS: Make your wish, !fortune."
+		s.ChannelMessageSend(m.ChannelID, greeting)
 	}
 }
 
