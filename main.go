@@ -12,6 +12,7 @@ import (
 )
 
 var fortunes []string
+var offensive []string
 
 func FortuneSplit(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	for i := 0; i < len(data); i++ {
@@ -25,11 +26,15 @@ func FortuneSplit(data []byte, atEOF bool) (advance int, token []byte, err error
 	return 0, data, bufio.ErrFinalToken
 }
 
-func ParseFortune(f *os.File) {
+func ParseFortune(f *os.File, o bool) {
 	scanner := bufio.NewScanner(f)
 	scanner.Split(FortuneSplit)
 	for scanner.Scan() {
-		fortunes = append(fortunes, scanner.Text())
+		if o {
+			offensive = append(fortunes, scanner.Text())
+		} else {
+			fortunes = append(fortunes, scanner.Text())
+		}
 	}
 	if err := scanner.Err(); err != nil {
 		fmt.Fprintf(os.Stderr, "reading input:%v\n", err)
@@ -48,13 +53,14 @@ func SendFortune(s *discordgo.Session, m *discordgo.MessageCreate) {
 	}
 
 	if m.Content == "!fortune" {
-		//msgtitle := "<@" + s.State.User.ID + ">, it's your lucky day."
 		msgtitle := m.Author.Username + ", it's your lucky day."
 		me := discordgo.MessageEmbed{ Title: msgtitle, Description: GetFortune(), Color: 39423 }
 		s.ChannelMessageSendEmbed(m.ChannelID, &me)
-	}
-
-	if m.Content == "!zoltar" {
+	} else if m.Content == "!offendme" {
+		msgtitle := m.Author.Username + ", it's your lucky day."
+		me := discordgo.MessageEmbed{ Title: msgtitle, Description: GetFortune(), Color: 14103594 }
+		s.ChannelMessageSendEmbed(m.ChannelID, &me)
+	} else if m.Content == "!zoltar" {
 		var greeting string = "ZOLTAR SAYS: Make your wish, !fortune."
 		s.ChannelMessageSend(m.ChannelID, greeting)
 	}
@@ -68,7 +74,15 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error reading fortune file: %v\n", err)
 		os.Exit(1)
 	}
-	ParseFortune(f)
+	ParseFortune(f, false)
+	f.Close()
+
+	f, err = os.Open("offensive")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error reading offensive fortune file: %v\n", err)
+		os.Exit(1)
+	}
+	ParseFortune(f, true)
 	f.Close()
 
 	if len(os.Args) != 2 {
