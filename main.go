@@ -14,6 +14,7 @@ import (
 var fortunes []string
 var offensive []string
 
+/* Scanner split function, reads in file and delimits by % */
 func FortuneSplit(data []byte, atEOF bool) (advance int, token []byte, err error) {
 	for i := 0; i < len(data); i++ {
 		if data[i] == '%' {
@@ -26,6 +27,7 @@ func FortuneSplit(data []byte, atEOF bool) (advance int, token []byte, err error
 	return 0, data, bufio.ErrFinalToken
 }
 
+/* Runs through the given file using the splitter function and fills the fortune slices */
 func ParseFortune(f *os.File, o bool) {
 	scanner := bufio.NewScanner(f)
 	scanner.Split(FortuneSplit)
@@ -41,11 +43,13 @@ func ParseFortune(f *os.File, o bool) {
 	}
 }
 
+/* Return a fortune randomly */
 func GetFortune() (fortune string) {
 	i := rand.Intn(len(fortunes))
 	return fortunes[i]
 }
 
+/* Upon receiving a command, bot sends a fortune */
 func SendFortune(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// ignore bot messages
 	if m.Author.ID == s.State.User.ID {
