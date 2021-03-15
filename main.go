@@ -6,21 +6,38 @@ import (
 	"math/rand"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
 	"github.com/bwmarrin/discordgo"
+	//yt "github.com/lazyduster/youtube"
 )
 
 const (
-	words = 5
-	commands = 5
+	words = 11
+	command_len = 3
 )
 
 var fortunes []string
 var offensive []string
-var commands = []string{"!fortune", "!offendme", "!owoify", "!cloaker", "!fuckme"}
+var commands = []string{"!fortune", "!offendme", "!owoify", "!fuckme"}
 var funcs = []func(){}
+
+/* Gets uptime for the system. */
+func GetUptime() (timevals [3]int) {
+	system := &syscall.Sysinfo_t{}
+	if err := syscall.Sysinfo(system); err != nil {
+		return timevals
+	} else {
+		system.Uptime /= 60
+		timevals[0] = int(system.Uptime % 60)
+		system.Uptime /= 60
+		timevals[1] = int(system.Uptime % 24)
+		timevals[2] = int(system.Uptime / 24)
+		return timevals
+	}
+}
 
 /* lol */
 func owoify(sentence string) (out string) {
@@ -30,6 +47,13 @@ func owoify(sentence string) (out string) {
 		{"r", "w"},
 		{"L", "W"},
 		{"R", "W"},
+		/* user suggestion: replace all phallic references to "bulgey wulgey" */
+		{"penis", "widdwe pickwe"},
+		{"PENIS", "WIDDWE PICKWE"},
+		{"cock", "bulgie wulgie"},
+		{"COCK", "BULGIE WULGIE"},
+		{"dick", "bulgie wulgie"},
+		{"DICK", "BULGIE WULGIE"},
 		{"!", faces[rand.Intn(6)]},
 	}
 	out = strings.ReplaceAll(sentence, glyphs[0][0], glyphs[0][1])
@@ -58,7 +82,7 @@ func ParseFortune(f *os.File, o bool) {
 	scanner.Split(FortuneSplit)
 	for scanner.Scan() {
 		if o {
-			offensive = append(fortunes, scanner.Text())
+			offensive = append(offensive, scanner.Text())
 		} else {
 			fortunes = append(fortunes, scanner.Text())
 		}
@@ -74,6 +98,12 @@ func GetFortune() (fortune string) {
 	return fortunes[i]
 }
 
+/* Return an offensive fortune randomly */
+func GetOffensive() (fortune string) {
+	i := rand.Intn(len(offensive))
+	return offensive[i]
+}
+
 /* Upon receiving a command, bot sends a fortune */
 func SendFortune(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// ignore bot messages
@@ -81,40 +111,72 @@ func SendFortune(s *discordgo.Session, m *discordgo.MessageCreate) {
 		return
 	}
 
+	var msgtitle string
+	var clr int
+	var desc string
 	cmdstr := strings.SplitN(m.Content, " ", 2)
 
-	if cmdstr[0] == "!fortune" {
-		msgtitle := m.Author.Username + ", it's your lucky day."
-		me := discordgo.MessageEmbed{ Title: msgtitle, Description: GetFortune(), Color: 39423 }
-		s.ChannelMessageSendEmbed(m.ChannelID, &me)
-	} else if cmdstr[0] == "!offendme" {
-		msgtitle := m.Author.Username + ", it's your lucky day."
-		me := discordgo.MessageEmbed{ Title: msgtitle, Description: GetFortune(), Color: 14103594 }
-		s.ChannelMessageSendEmbed(m.ChannelID, &me)
-	} else if cmdstr[0] == "!owoify" {
-		msgtitle := m.Author.Username + ", are you fucking kidding me?"
-		me := discordgo.MessageEmbed{ Title: msgtitle, Description: owoify(cmdstr[1]), Color: 0xFFC0CB }
-		s.ChannelMessageSendEmbed(m.ChannelID, &me)
-	} else if cmdstr[0] == "!fuckme" {
-		me := discordgo.MessageEmbed{ Title: "An odd request...", Description: "...but okay, \\*cums\\*.", Color: 0xFFC0CB }
-		s.ChannelMessageSendEmbed(m.ChannelID, &me)
-	} else if cmdstr[0] == "!fuckmeinitalian" {
-		me := discordgo.MessageEmbed{ Title: "A spicy meatball...", Description: "...but okay, *cums*.", Color: 0xFFC0CB }
-		s.ChannelMessageSendEmbed(m.ChannelID, &me)
-	} else if cmdstr[0] == "!cloaker" {
-		me := discordgo.MessageEmbed{ Title: "WHOOOOOO!", Description: "CALL ME THE CLOAKER SMOKER!", Color: 0x000000 }
-		s.ChannelMessageSendEmbed(m.ChannelID, &me)
-	} else if cmdstr[0] == "!zoltar" {
-		var greeting string = "ZOLTAR SAYS: Make your wish, !fortune."
-		s.ChannelMessageSend(m.ChannelID, greeting)
-	}
-	/*
-	for i := 0; i < 6; i++ {
-		if cmdstr[0] == commands[0] {
-			//
+	switch cmdstr[0] {
+	case "!uptime":
+		msgtitle = m.Author.Username + ", ZOLTAR has lived since time immemorial!"
+		timevals := GetUptime()
+		desc += "System uptime is: "
+		if timevals[2] != 0 {
+			desc += strconv.Itoa(timevals[2]) + " days, "
 		}
+		if timevals[1] != 0 {
+			desc += strconv.Itoa(timevals[1]) + " hours, and "
+			desc += strconv.Itoa(timevals[0]) + " minutes."
+		} else {
+			desc += strconv.Itoa(timevals[0]) + " minutes."
+		}
+		clr = 0x32CD32
+	case "!downtime":
+		msgtitle = m.Author.Username + ", the mighty ZOLTAR never goes down!"
+		desc = "...and even if I did, it'd be for less than mee6 :^)"
+		clr = 0x32CD32
+	case "!q":
+		msgtitle = m.Author.Username + " wills it, so it shall be done."
+		item := SearchYT(cmdstr[1])
+		if item == nil {
+			s.ChannelMessageSend(m.ChannelID, "Search returned no results.")
+			return
+		}
+		desc = item.Title
+		clr = 0xC4302B
+	case "!fortune":
+		msgtitle = m.Author.Username + ", it's your lucky day."
+		desc = GetFortune()
+		clr = 0x0099FF
+	case "!offendme":
+		msgtitle = m.Author.Username + ", it's your lucky day."
+		desc = GetOffensive()
+		clr = 0xD7342A
+	case "!owoify":
+		msgtitle = m.Author.Username + ", are you fucking kidding me?"
+		desc = owoify(cmdstr[1])
+		clr = 0xFFC0CB
+	case "!fuckme":
+		msgtitle = "An odd request..."
+		desc = "...but okay, \\*cums\\*."
+		clr = 0xFFC0CB
+	case "!fuckmeinitalian":
+		msgtitle = "A spicy meatball..."
+		desc = "...but okay, *cums*."
+		clr = 0xFFC0CB
+	case "!cloaker":
+		msgtitle = "WHOOOOOO!"
+		desc = "CALL ME THE CLOAKER SMOKER!"
+		clr = 0x000000
+	case "!zoltar":
+		var msg string = "ZOLTAR SAYS: Make your wish, !fortune."
+		s.ChannelMessageSend(m.ChannelID, msg)
+		return
+	default:
+		return
 	}
-	*/
+	me := discordgo.MessageEmbed{ Title: msgtitle, Description: desc, Color: clr }
+	s.ChannelMessageSendEmbed(m.ChannelID, &me)
 }
 
 func main() {
