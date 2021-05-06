@@ -10,8 +10,10 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"cgt.name/pkg/go-mwclient"
+	
 	"github.com/bwmarrin/discordgo"
-	//yt "github.com/lazyduster/youtube"
 )
 
 const (
@@ -21,8 +23,6 @@ const (
 
 var fortunes []string
 var offensive []string
-var commands = []string{"!fortune", "!offendme", "!owoify", "!fuckme"}
-var funcs = []func(){}
 
 /* Gets uptime for the system. */
 func GetUptime() (timevals [3]int) {
@@ -61,6 +61,31 @@ func owoify(sentence string) (out string) {
 		out = strings.ReplaceAll(out, glyphs[i][0], glyphs[i][1])
 	}
 	return out
+}
+
+/* Opens a MediaWiki client and returns a random page. */
+func ReturnWiki() (url string, err error) {
+	w, err := mwclient.New("https://en.wikipedia.org/w/api.php", "zoltarBot")
+	if err != nil {
+		return "Problem creating wiki client: " + err.Error(), err
+	}
+
+	parameters := map[string]string{
+		"action":       "query",
+		"prop":         "info",
+		"inprop":       "url",
+		"generator":    "random",
+		"grnnamespace": "0",
+		"grnlimit":     "1",
+	}
+
+	res, err := w.Get(parameters)
+	if err != nil {
+		return "Problem making api request: " + err.Error(), err
+	}
+
+	temp, _ := res.GetObjectArray("query", "pages")
+	return temp[0].GetString("fullurl")
 }
 
 /* Scanner split function, reads in file and delimits by % */
@@ -104,8 +129,8 @@ func GetOffensive() (fortune string) {
 	return offensive[i]
 }
 
-/* Upon receiving a command, bot sends a fortune */
-func SendFortune(s *discordgo.Session, m *discordgo.MessageCreate) {
+/* Upon receiving a command, bot parses and executes */
+func ParseCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 	// ignore bot messages
 	if m.Author.ID == s.State.User.ID {
 		return
@@ -135,6 +160,7 @@ func SendFortune(s *discordgo.Session, m *discordgo.MessageCreate) {
 		msgtitle = m.Author.Username + ", the mighty ZOLTAR never goes down!"
 		desc = "...and even if I did, it'd be for less than mee6 :^)"
 		clr = 0x32CD32
+	/* Youtube command, currently not working */
 	case "!q":
 		msgtitle = m.Author.Username + " wills it, so it shall be done."
 		item := SearchYT(cmdstr[1])
@@ -168,6 +194,9 @@ func SendFortune(s *discordgo.Session, m *discordgo.MessageCreate) {
 		msgtitle = "WHOOOOOO!"
 		desc = "CALL ME THE CLOAKER SMOKER!"
 		clr = 0x000000
+	case "!putmetosleep":
+		desc, _ = ReturnWiki()
+		s.ChannelMessageSend(m.ChannelID, desc)
 	case "!zoltar":
 		var msg string = "ZOLTAR SAYS: Make your wish, !fortune."
 		s.ChannelMessageSend(m.ChannelID, msg)
@@ -213,7 +242,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	dg.AddHandler(SendFortune)
+	dg.AddHandler(ParseCommand)
 	dg.Identify.Intents = discordgo.MakeIntent(discordgo.IntentsGuildMessages)
 
 	// Open websocket and begin listening
