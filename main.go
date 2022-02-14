@@ -194,9 +194,14 @@ func ParseCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 		msgtitle = "WHOOOOOO!"
 		desc = "CALL ME THE CLOAKER SMOKER!"
 		clr = 0x000000
+	case "!cytube":
+		msgtitle = m.Author.Username + ", a marvelous idea!"
+		desc = "Cytube links go here."
+		clr = 0x8FBCBB
 	case "!putmetosleep":
 		desc, _ = ReturnWiki()
 		s.ChannelMessageSend(m.ChannelID, desc)
+		return
 	case "!zoltar":
 		var msg string = "ZOLTAR SAYS: Make your wish, !fortune."
 		s.ChannelMessageSend(m.ChannelID, msg)
