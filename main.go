@@ -156,20 +156,15 @@ func ParseCommand(s *discordgo.Session, m *discordgo.MessageCreate) {
 			desc += strconv.Itoa(timevals[0]) + " minutes."
 		}
 		clr = 0x32CD32
+	case "!today":
+		img := discordgo.MessageEmbedImage{ URL: "https://misato.today/api/today.gif" }
+		msg := discordgo.MessageEmbed{ Color: 0x032A5D, Image: &img }
+		s.ChannelMessageSendEmbed(m.ChannelID, &msg)
+		return
 	case "!downtime":
 		msgtitle = m.Author.Username + ", the mighty ZOLTAR never goes down!"
 		desc = "...and even if I did, it'd be for less than mee6 :^)"
 		clr = 0x32CD32
-	/* Youtube command, currently not working */
-	case "!q":
-		msgtitle = m.Author.Username + " wills it, so it shall be done."
-		item := SearchYT(cmdstr[1])
-		if item == nil {
-			s.ChannelMessageSend(m.ChannelID, "Search returned no results.")
-			return
-		}
-		desc = item.Title
-		clr = 0xC4302B
 	case "!fortune":
 		msgtitle = m.Author.Username + ", it's your lucky day."
 		desc = GetFortune()
